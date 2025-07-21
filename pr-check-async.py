@@ -174,6 +174,8 @@ async def fetch_status(session, sem, pr_url, retries=2, retry_delay=2):
             pr_data = None
             for attempt in range(retries):
                 async with session.get(pr_api) as pr_resp:
+                    if pr_resp.status != 200:
+                        raise Exception(f"Failed to fetch PR info. Status code: {pr_resp.status}")
                     pr_data = await pr_resp.json()
                     mergeable_state = pr_data.get("mergeable_state")
                     # If the state is not 'unknown', break and use this value
@@ -194,6 +196,8 @@ async def fetch_status(session, sem, pr_url, retries=2, retry_delay=2):
 
             # === Fetch PR comments ===
             async with session.get(comment_api) as cmt_resp:
+                if cmt_resp.status != 200:
+                    raise Exception(f"Failed to fetch comments. Status code: {cmt_resp.status}")
                 comments = await cmt_resp.json()
 
             # Filter external comments (not from excluded users, not bots, no excluded keywords)
@@ -212,8 +216,8 @@ async def fetch_status(session, sem, pr_url, retries=2, retry_delay=2):
             created_at = pr_data.get("created_at")
             return pr_url, status, external_flag, comment_text, author_login, created_at, mergeable_state
         except Exception as e:
-            # If any unexpected error occurs, return error information
-            return pr_url, "Error", "Error", str(e), "Unknown"
+            print(f"⚠️ Error occurred while processing {pr_url}: {e}")
+            return pr_url, "Error", "Error", str(e), "Unknown", None, None
 
 # === ASYNC MAIN: Process all PRs in Excel ===
 
